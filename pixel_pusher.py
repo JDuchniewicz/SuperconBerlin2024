@@ -28,27 +28,25 @@ _LOOPING = const(False)
 _IRQ     = const(False)
 # pixel_debug = machine.Pin(27, machine.Pin.OUT)
 
-### Changing the frame_starts to not read them from adc_reader - TODO: later abstract it in another class
-
 class Pixel_Pusher():
 
-    @micropython.viper
+    @micropython.viper 
     def boop(self, color:int, frame:int):
-        """Trigger me once per buffer frame update"""
+        """Trigger me once per adc_reader frame update"""
         # pixel_debug.high()
         ## set frame, color
         machine.mem16[self.color_storage_address] = self.phosphors[color & COLOR_MASK]
         self.stage_sample_data.registers[0] = self.frame_starts[frame & FRAME_MASK]
         ## reset counter lookup
-        self.pixel_frame_counter.registers[0] = self.frame_counter_lookup_address
+        self.pixel_frame_counter.registers[0] = self.frame_counter_lookup_address  
         ## and go!
         self.stage_sample_data.registers[7] = 1 ## transaction count trigger register
         # pixel_debug.low()
 
-    @micropython.viper
+    @micropython.viper 
     def pixel_frame_interrupt_handler(self, dma_caller):
         ## even this is too much  -- my guess is that the IRQs stack up during a GC or other system stupid thing
-        self.frame_done = True
+        self.frame_done = True 
 
     def resume(self):
         for d in self.allDMAs:
@@ -64,21 +62,21 @@ class Pixel_Pusher():
         for d in self.allDMAs:
             d.close()
 
-    def __init__(self, buffer):
+    def __init__(self, adc_reader):
         ## Consider deinitializing screen here?  Or should that just always happen in code: risky! (@_@)
-        ## Needs (adc_reader) *now buffer* b/c it needs to know where the samples are stored
-        self.frame_starts = buffer.frame_starts
-        self.buffer_frame  = buffer.current_frame # TODO: is that used at all?
+        ## Needs adc_reader b/c it needs to know where the samples are stored
+        self.frame_starts = adc_reader.frame_starts
+        self.adc_frame = adc_reader.current_frame
         self.phosphors = phosphor_gradient
-        self.num_samples_per_frame = buffer.num_samples_per_frame
+        self.num_samples_per_frame = adc_reader.num_samples_per_frame
         self.frame_done = False
         self._init_PIO()
-
+        
         ## Data storage for DMA trickery
-        ## These three 32-bit numbers are formatted up to pass to the pixel_pusher_pio
+        ## These three 32-bit numbers are formatted up to pass to the pixel_pusher_pio 
         ## It takes care of setting the command bit when relevant, and repeating the data
         ## 120s are just placeholders for the X/Y coordinates
-        self.pixel_command_array = array.array("B",
+        self.pixel_command_array = array.array("B", 
                                                [0, SET_X, 0, 120,
                                                 0, SET_Y, 0, 120,
                                                 0, SET_COLOR, 0xFF,0xFF,
@@ -89,10 +87,10 @@ class Pixel_Pusher():
         self.command_y     = addressof(self.pixel_command_array) + 7
         self.command_color = addressof(self.pixel_command_array) + 10
 
-        ## Storage for one sample from ADC
+        ## Storage for one sample from ADC  
         self.one_sample_storage = bytearray(4)
         self.one_sample_storage_address = addressof(self.one_sample_storage)
-
+        
         ## Storage for the color
         self.color_storage = bytearray(2)
         ## One way to set it
@@ -106,10 +104,10 @@ class Pixel_Pusher():
         self.frame_counter_lookup = array.array("L", [1]*(self.num_samples_per_frame-1))
         self.frame_counter_lookup.append(0)
         self.frame_counter_lookup_address = addressof(self.frame_counter_lookup)
-
+                
         ## And here's the world's most convoluted DMA / PIO chain!
         self.stage_sample_data       = rp2.DMA() ## pulls one sample pair from memory into bit_flipper_pio
-        self.store_flipped_data      = rp2.DMA() ## pulls bit-flipped pair and writes to sample storage
+        self.store_flipped_data      = rp2.DMA() ## pulls bit-flipped pair and writes to sample storage 
         self.pixel_load_x            = rp2.DMA() ## extracts X from sample storage, puts it in pixel command array
         self.pixel_load_y            = rp2.DMA() ## extracts Y ...
         self.pixel_load_color        = rp2.DMA() ## extracts color ...
@@ -123,17 +121,17 @@ class Pixel_Pusher():
         self.pixel_frame_counter_read_address = int(addressof(self.pixel_frame_counter.registers[0:]))
 
         ## Control defs:
-        ##  {'inc_read': 0, 'high_pri': 0,  'ring_sel': 0, 'size': 0,
-        ##   'enable': 0, 'treq_sel': 0, 'sniff_en': 0,  'chain_to': 0,
+        ##  {'inc_read': 0, 'high_pri': 0,  'ring_sel': 0, 'size': 0, 
+        ##   'enable': 0, 'treq_sel': 0, 'sniff_en': 0,  'chain_to': 0, 
         ##   'inc_write': 0, 'ring_size': 0, 'bswap': 0, 'IRQ_quiet': 0}
-        self.stage_sample_data.ctrl = self.stage_sample_data.pack_ctrl(default = 0,
+        self.stage_sample_data.ctrl = self.stage_sample_data.pack_ctrl(default = 0, 
                                                             size      = dma_defs.SIZE_4BYTES,
                                                             enable    = 1,
                                                             treq_sel  = dma_defs.DREQ_PIO0_TX2,  ## pace to TX FIFO
                                                             chain_to  = self.store_flipped_data.channel_id,
-                                                            IRQ_quiet = 1,
+                                                            IRQ_quiet = 1, 
                                                             inc_read  = 1
-                                                            )
+                                                            ) 
         self.stage_sample_data.config(count = 1,
                                       read  = self.frame_starts[0],  ## initial value, set this to start of frame to begin chain
                                       write = pio_defs.PIO0_BASE + pio_defs.TXF2_OFFSET
@@ -141,7 +139,7 @@ class Pixel_Pusher():
         if _IRQ:
             self.stage_sample_data.irq(handler=self.pixel_frame_interrupt_handler, hard=True)
             ## when one-shot, don't need to interrupt itself.
-
+        
 
         ## The bit-flipper PIO is in the middle here.
         ## It's  PIO 0, 2
@@ -166,7 +164,7 @@ class Pixel_Pusher():
                                                              IRQ_quiet = 1
                                                              )
         self.pixel_load_x.config(count = 1,
-                                 read  = self.one_sample_storage_address + X_MSB_OFFSET,
+                                 read  = self.one_sample_storage_address + X_MSB_OFFSET, 
                                  write = self.command_x)
 
         self.pixel_load_y.ctrl = self.pixel_load_y.pack_ctrl(default = 0,
@@ -177,7 +175,7 @@ class Pixel_Pusher():
                                                              IRQ_quiet = 1
                                                              )
         self.pixel_load_y.config(count = 1,
-                                 read  = self.one_sample_storage_address + Y_MSB_OFFSET,
+                                 read  = self.one_sample_storage_address + Y_MSB_OFFSET, 
                                  write = self.command_y)
 
         self.pixel_load_color.ctrl = self.pixel_load_color.pack_ctrl(default = 0,
@@ -189,7 +187,7 @@ class Pixel_Pusher():
                                                              IRQ_quiet = 1
                                                              )
         self.pixel_load_color.config(count = 1,
-                                 read  = self.color_storage_address,
+                                 read  = self.color_storage_address, 
                                  write = self.command_color)
 
         self.pixel_command_to_screen.ctrl = self.pixel_command_to_screen.pack_ctrl(default = 0,
@@ -204,7 +202,7 @@ class Pixel_Pusher():
                                                                                    ring_size = 4  # 2**4 = 16 bytes = 4 transfers
                                                                                    )
         self.pixel_command_to_screen.config(count = 3,
-                                            read  = addressof(self.pixel_command_array),
+                                            read  = addressof(self.pixel_command_array),   
                                             write = pio_defs.PIO1_BASE + pio_defs.TXF0_OFFSET)  ## PIO sm(4)
 
 
@@ -232,15 +230,15 @@ class Pixel_Pusher():
                                         write = addressof(self.stage_sample_data.registers[7:]), ## count trigger register
                                         read  = addressof(self.frame_counter_lookup))
 
-
+    
     def _init_PIO(self):
-        ## same pins shared with
+        ## same pins shared with 
         self.sck_pin  = machine.Pin(pin_defs.sck, machine.Pin.OUT)
         self.data_pin = machine.Pin(pin_defs.data, machine.Pin.OUT)
         self.dc_pin   = machine.Pin(pin_defs.dc, machine.Pin.OUT)
 
         ## PIO 1, 0
-        self.pixel_pusher_sm = rp2.StateMachine(4, pio_code.handle_screen_command, freq=250_000_000,
+        self.pixel_pusher_sm = rp2.StateMachine(4, pio_code.handle_screen_command, freq=250_000_000, 
                                     out_base=self.data_pin, set_base=self.dc_pin, sideset_base=self.sck_pin)
         self.pixel_pusher_sm.active(1)
 

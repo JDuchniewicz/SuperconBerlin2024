@@ -5,7 +5,6 @@ import time
 import machine
 import dma_defs
 import pio_defs
-import vos_debug
 
 # read_debug = machine.Pin(26, machine.Pin.OUT)
 
@@ -18,7 +17,6 @@ class ADC_Reader():
 
     def __init__(self):
 
-        vos_debug.debug_print(vos_debug.DEBUG_LEVEL_WARNING,"ADC init start")
         self.num_samples_per_frame = num_samples_per_frame
         ## Setup storage for frames of samples
         self.audio_data = bytearray(audio_data_length)
@@ -28,7 +26,6 @@ class ADC_Reader():
         ## finish up init
         self.align_frame_lookup_address()
         self.config_dmas()
-        vos_debug.debug_print(vos_debug.DEBUG_LEVEL_WARNING,"ADC init done")
 
     def init(self):
         self.__init__()
@@ -52,14 +49,14 @@ class ADC_Reader():
         time.sleep_ms(10)
         self.audio_read_transfer.ctrl |= 1 ## set enable bit
         self.audio_read_transfer.config(trigger=True)
-
-    @micropython.viper
+ 
+    @micropython.viper 
     def audio_read_frame_interrupt(self, calling_dma):
         """fires off once per frame, in parallel with audio_read_control"""
         # read_debug.high()
         self.current_frame = (int(self.current_frame)+1) & 0x0F
         ## setup frames/colors and trigger pixel pusher here
-        ## want it to go through one cycle -- 15 frames at 15 colors.
+        ## want it to go through one cycle -- 15 frames at 15 colors. 
 
         # read_debug.low()
 
@@ -124,7 +121,7 @@ class ADC_Reader():
     ####################################
     ##  Residual useful debugging stuff
     ####################################
-
+    
     def debug_print_frames(self,n):
         for j in range(16):
             print(f'############## {j} ################')
