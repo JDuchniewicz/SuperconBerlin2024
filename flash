@@ -1,0 +1,25 @@
+#!/bin/bash
+while true
+do
+	if [ -e /dev/ttyACM0 ] 
+	then
+		echo "Flashing"
+		mpremote cp supercon_menu.py :
+		mpremote cp splash_2024.jpg :
+		mpremote cp splash_europe.jpg :
+		mpremote reset
+		echo "###############################################"
+		echo "## Thank you for using the Hackaday Flasher! ##"
+		echo "###############################################"
+		echo ""
+		## wait for device to reattach tty
+		sleep 1
+		## twirl in loop until it gets pulled again
+		echo "Waiting for the next badge..."
+		while [ -e /dev/ttyACM0 ]
+		do
+			true
+		done
+	fi
+done
+
