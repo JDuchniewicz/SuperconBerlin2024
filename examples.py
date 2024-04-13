@@ -151,22 +151,37 @@ def random_walk_example(v):
 #
 #    return img_array
 
+def sweep_screen_example():
+    # Sweeping motion of rendering the screen with something
+    RANGE = 26000
+    # this is actually how much to jump between each render (we VERY INEFFICIENTLY RENDER SOMETHING)
+    X_SWEEP_SPEED = 100
+    Y_SWEEP_SPEED = 100
+    while True:
+        for i in range(-RANGE, RANGE, X_SWEEP_SPEED):
+            for j in range(-RANGE, RANGE, Y_SWEEP_SPEED):
+                v.wave.point(i, j)
+
+    # DMA dies down when we stop the data flow
+    # also we get weird gaps - I wonder why they happen :scratch scratch:
+
+
 def noise_example(v):
     SCALE = 20000
     FREQUENCY = 1000
 	# Noise parameters
-    width, height = 100, 100
+    width, height = 26, 26 # should be 260by 260
     scale = 50.0
     octaves = 6
     persistence = 0.5
     lacunarity = 2.0
     base = 0
     # Generate noise image
-    #print("generating noise image")
-    #noise_img = generate_noise_image(width, height)
-    #base += 0.02  # Change base to animate
+    print("generating noise image")
+    noise_img = generate_noise_image(width, height)
+    base += 0.02  # Change base to animate
 
-    #print("success")
+    print("success")
     ## Update the pygame surface with the noise image
     #while True:
     #    for x in range(width):
@@ -178,30 +193,37 @@ def noise_example(v):
     #                v.wave.point(x,y)
     #                #screen.set_at((x, y), (color_value, color_value, color_value))
 
-    # points hopping around the screen
-    #time.sleep_ms(100)
-    #for i in range(FREQUENCY):
-    #    x = random.randrange(-SCALE, SCALE)
-    #    y = random.randrange(-SCALE, SCALE)
-    #    for a in range (50):
-    #        for b in range (50):
-    #            print(f"Printing point {x + a} {y + a}")
-    #            v.wave.point(x + a,y + b)
-
-    #    time.sleep_us(10)
-
-    #while True:
-    #    time.sleep(1)
-
     # Sweeping motion of rendering the screen with something
-    RANGE = 25000
+    RANGE = 26000
     # this is actually how much to jump between each render (we VERY INEFFICIENTLY RENDER SOMETHING)
-    X_SWEEP_SPEED = 100
-    Y_SWEEP_SPEED = 100
+    X_SWEEP_SPEED = 300
+    Y_SWEEP_SPEED = 300
+    for i in range(width):
+        for j in range(height):
+            color_value = int(noise_img[j][i] * 255)
+            print(f"{i} {j} {color_value}")
+            # TODO: not sure if this works properly <-seems to be creating gaps
+
     while True:
         for i in range(-RANGE, RANGE, X_SWEEP_SPEED):
+            #x = (int)(math.fabs(i // 1000) - 1)
+            #print(f"index x: {x}")
             for j in range(-RANGE, RANGE, Y_SWEEP_SPEED):
-                v.wave.point(i, j)
+                # creating holes work somehow - but looks like crap
+                if (j > 0 and i > 0 and i < 4000 and j < 4000):
+                    continue
+                if (j > -8000 and i > -8000 and i < -4000 and j < -4000):
+                    continue
+                #y = (int)(math.fabs(j // 1000) - 1)
+                #color_value = int(noise_img[y][x] * 255)
+                #if (color_value > 0):
+                #    v.wave.point(i, j)
+                #r = random.randrange(3, 10)
+                #if (r > 8):
+                v.wave.point(j, i)
+
+    # idea - try drawing images - steering of that is finincky
+    # maybe some smart converter of image to this rendering algo?
 
     # DMA dies down when we stop the data flow
     # also we get weird gaps - I wonder why they happen :scratch scratch:
