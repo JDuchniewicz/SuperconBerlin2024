@@ -1,10 +1,10 @@
-import machine 
+import machine
 import joystick
 from menu import *   # bad habit but makes our menu definition nice
 from vos_state import vos_state
 import vectoros
 import colors
-import gc 
+import gc
 import random
 
 
@@ -36,8 +36,16 @@ def toggle_sound(arg):
 def run_lissajous(arg):
     vos_state.show_menu=False
     vos_state.gc_suspend = True
-    vectoros.launch_task('lissajous')  
+    vectoros.launch_task('lissajous')
     # we never come back, vectorscope
+    return EXIT
+
+# the main vector scope demo
+def run_renderer(arg):
+    vos_state.show_menu=False
+    vos_state.gc_suspend = True
+    vectoros.launch_task('renderer')
+    # we never come back, renderer + vectorscope
     return EXIT
 
 def reboot(arg):
@@ -52,7 +60,7 @@ def abcd(key):
         vos_debug.debug_print(vos_debug.DEBUG_LEVEL_INFO,f"Menu key {key}")
         kdict={ keyleds.KEY_A: 'A', keyleds.KEY_B: 'B', keyleds.KEY_C: 'C', keyleds.KEY_D: 'D'}
         await vectoros.launch_vecslot("slot"+kdict[key])
-    
+
 
 # I really didn't want this to be async but it seems like do_menu must have an await
 # and run rarely returns when you have a lot going on
@@ -63,22 +71,23 @@ async def vos_main():
 # note: m_back and m_exit were imported from menu
     ## Start with sound off
     machine.Pin(22, machine.Pin.OUT).toggle()
-    
+
     screen=vectoros.get_screen()
     splashes = ["splash_europe.jpg", "splash_2024.jpg", "splash_wrencher.jpg"]
     screen.jpg(random.choice(splashes))
     await asyncio.sleep_ms(1000)
 
-    
+
 
     while True: # since this is the main menu, we don't really every quit
         print("creating slotkey")
         slotkey=keyboardcb.KeyboardCB(abcd,keyleds.KEY_ABCD)
         with Menu(clear_after=True,fg_color=colors.PHOSPHOR_DARK,bg_color=colors.PHOSPHOR_BG,
-                  cursor_bg=colors.PHOSPHOR_BG, cursor_fg=colors.PHOSPHOR_BRIGHT) as amenu:  
+                  cursor_bg=colors.PHOSPHOR_BG, cursor_fg=colors.PHOSPHOR_BRIGHT) as amenu:
             ## name in menu, command to run, return value?
             submenu=[["  Planets", planets, 0],["  Sketch",runsketch,0],["  Back",m_exit,None]]
             mainmenu=[[" Lissajous", run_lissajous,None],
+                      [" Renderer", run_renderer, None],
                       [" Demos", SUBMENU, submenu] ,
                       [" Sound", toggle_sound, None],
                       [" Reboot",reboot,False],
@@ -91,13 +100,13 @@ async def vos_main():
         vos_debug.debug_print(vos_debug.DEBUG_LEVEL_INFO,f"Menu waiting {vos_state.show_menu}")
         while vos_state.show_menu==False:   # wait until we have to be seen again
             await asyncio.sleep_ms(0)
-    
+
 
 def main():
     asyncio.run(vos_main())
-    # this never runs 
+    # this never runs
 
 if __name__=="__main__":
     import vectoros
     vectoros.run()
-    
+
