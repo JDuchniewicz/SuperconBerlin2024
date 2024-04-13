@@ -46,6 +46,12 @@ def run_perlin(arg):
     vectoros.launch_task('perlin')
     return EXIT
 
+def run_rainbow(arg):
+    vos_state.show_menu=False
+    vos_state.gc_suspend = True
+    vectoros.launch_task('rainbow_dash')
+    return EXIT
+
 def reboot(arg):
     if arg==False:
         vectoros.reset()
@@ -85,10 +91,12 @@ async def vos_main():
             ## name in menu, command to run, return value?
             submenu=[["  Planets", planets, 0],["  Sketch",runsketch,0],["  Back",m_exit,None]]
             mainmenu=[[" Lissajous", run_lissajous,None],
+                      [" Rainbow", run_rainbow, None] ,
                       [" Perlin", run_perlin, None] ,
-                      [" Demos", SUBMENU, submenu] ,
-                      [" Sound", toggle_sound, None],
-                      [" Reboot",reboot,False],
+                      [" Perlin", run_perlin, None] ,
+                      #[" Demos", SUBMENU, submenu] ,
+                      #[" Sound", toggle_sound, None],
+                      #[" Reboot",reboot,False],
                       ]
 
 # comment next line for default font
